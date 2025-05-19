@@ -44,13 +44,22 @@
         sshkeys: "{{ ssh_pub_key }}"
         timeout: 60
         state: present
-        user_data: |
-          locale: fr_FR.UTF-8
-          keyboard:
-            layout: fr
-          timezone: Europe/Paris
-          packages:
-            - locales
-          runcmd:
-            - locale-gen fr_FR.UTF-8
-            - update-locale LANG=fr_FR.UTF-8
+        agent: 1
+        
+    - name: Wait for VM to report IP via guest agent
+      shell: |
+        for i in {1..20}; do
+          ip=$(qm guest cmd {{ vm_id }} network-get-interfaces | jq -r '.[].ip-addresses[]?."ip-address"' | grep -v '127.0.0.1' | head -n 1)
+          if [[ -n "$ip" ]]; then echo $ip && break; fi
+          sleep 10
+        done
+      register: vm_ip
+      delegate_to: localhost
+      changed_when: false
+
+    - name: Set dynamic host for Ansible
+      add_host:
+        name: debian-vm
+        ansible_host: "{{ vm_ip.stdout }}"
+        ansible_user: "{{ ci_user }}"
+        ansible_ssh_private_key_file: "{{ ssh_pub_key }}"
