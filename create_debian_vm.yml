@@ -37,7 +37,6 @@
         node: "{{ proxmox_node }}"
         state: started
         timeout: 60
-        vmid: "{{ vm_id | int }}"
 
     - name: Fail script if VM already exists
       fail:
