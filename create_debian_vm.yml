@@ -19,24 +19,34 @@
 
   tasks:
     - name: Clone from Debian cloud-init template
-      community.general.proxmox_kvm:
-        api_host: "{{ proxmox_host }}"
-        api_user: "{{ api_user }}"
-        api_token_id: "{{ api_token_id }}"
-        api_token_secret: "{{ api_token_secret }}"
-        node: "{{ proxmox_node }}"
-        vmid: "{{ vm_id }}"
-        clone: "{{ template_vm_id }}"
-        name: "{{ vm_name }}"
+  community.general.proxmox_kvm:
+    api_host: "{{ proxmox_host }}"
+    api_user: "{{ api_user }}"
+    api_token_id: "{{ api_token_id }}"
+    api_token: "{{ api_token }}"
+    node: "{{ proxmox_node }}"
+    vmid: "{{ vm_id }}"
+    clone: "{{ template_vm_id }}"
+    name: "{{ vm_name }}"
+    storage: "{{ storage }}"
+    memory: 1024
+    cores: 1
+    net:
+      - model: virtio
+        bridge: vmbr0
+    ide:
+      - index: 2
+        media: cdrom
         storage: "{{ storage }}"
-        memory: 1024
-        cores: 1
-        net0: virtio,bridge=vmbr0
-        ide2: "{{ storage }}:cloudinit"
-        serial:
-          serial0: socket
-        sata0: "{{ storage }}:{{ target_disk_size }}"
-        ciuser: "{{ ci_user }}"
-        cipassword: "{{ ci_pass }}"
-        sshkeys: "{{ ssh_pub_key }}"
-        state: present
+        file: cloudinit
+    serial:
+      serial0: socket
+    sata:
+      - index: 0
+        storage: "{{ storage }}"
+        size: "{{ target_disk_size }}"
+    ciuser: "{{ ci_user }}"
+    cipassword: "{{ ci_pass }}"
+    sshkeys: "{{ ssh_pub_key }}"
+    state: present
+
