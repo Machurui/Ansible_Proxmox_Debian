@@ -7,7 +7,7 @@
     vm_id: 120
     vm_name: "debian-vm-auto"
     template_vm_id: 9000
-    storage: "local-lvm"
+    storage: "HDD-TAFF1"
     target_disk_size: 10G
     proxmox_host: "{{ lookup('env', 'PROXMOX_IP') }}"
     api_user: "{{ lookup('env', 'PROXMOX_API_USER') }}"
