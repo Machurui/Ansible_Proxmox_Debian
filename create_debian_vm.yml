@@ -44,3 +44,13 @@
         sshkeys: "{{ ssh_pub_key }}"
         timeout: 60
         state: present
+        user_data: |
+          locale: fr_FR.UTF-8
+          keyboard:
+            layout: fr
+          timezone: Europe/Paris
+          packages:
+            - locales
+          runcmd:
+            - locale-gen fr_FR.UTF-8
+            - update-locale LANG=fr_FR.UTF-8
