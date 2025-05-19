@@ -19,7 +19,7 @@
 
   tasks:
     - name: Clone from Debian cloud-init template
-      community.general.proxmox_kvm:
+      community.general.proxmox:
         api_host: "{{ proxmox_host }}"
         api_token_id: "{{ api_token_id }}"
         api_token_secret: "{{ api_token_secret }}"
