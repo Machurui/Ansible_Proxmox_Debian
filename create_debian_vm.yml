@@ -1,112 +1,109 @@
 ---
-- name: Create Debian VM on Proxmox with API token
+- name: Provision Debian VM and configure French locale
   hosts: localhost
-  gather_facts: no
+  gather_facts: false
   vars:
-    proxmox_node: "{{ lookup('env', 'PROXMOX_NODE') }}"
     vm_id: 120
     vm_name: "debian-vm-auto"
     template_vm_id: "debian-template"
     storage: "HDD-TAFF1"
     target_disk_size: 10G
+    proxmox_node: "{{ lookup('env', 'PROXMOX_NODE') }}"
     proxmox_host: "{{ lookup('env', 'PROXMOX_IP') }}"
     api_user: "{{ lookup('env', 'PROXMOX_API_USER') }}"
     api_password: "{{ lookup('env', 'PROXMOX_API_PASSWORD') }}"
-    api_token_id: "{{ lookup('env', 'PROXMOX_API_TOKEN_ID') }}"
-    api_token_secret: "{{ lookup('env', 'PROXMOX_API_TOKEN_SECRET') }}"
-    ssh_pub_key: "{{ lookup('env', 'SSH_PUB_KEY') }}"
     ci_user: "{{ lookup('env', 'CI_USER') }}"
     ci_pass: "{{ lookup('env', 'CI_PASS') }}"
-    
+    ssh_pub_key: "{{ lookup('env', 'SSH_PUB_KEY') }}"
 
   tasks:
-    - name: Clone from Debian cloud-init template
+    - name: Clone Debian VM from template
       community.general.proxmox_kvm:
         api_host: "{{ proxmox_host }}"
         api_user: "{{ api_user }}"
         api_password: "{{ api_password }}"
-        # api_token_id: "{{ api_token_id }}"
-        # api_token_secret: "{{ api_token_secret }}"
         node: "{{ proxmox_node }}"
         clone: "{{ template_vm_id }}"
         name: "{{ vm_name }}"
         memory: 1024
         cores: 1
+        scsihw: virtio-scsi-single
         ide:
           ide0: 'local:cloudinit,format=qcow2'
         net:
           net0: 'virtio,bridge=vmbr0'
         scsi:
-          scsi0: 'HDD-TAFF1:10,format=raw'
-        scsihw: virtio-scsi-single
+          scsi0: "{{ storage }}:{{ target_disk_size }},format=qcow2"
+        agent: 1
         ciuser: "{{ ci_user }}"
         cipassword: "{{ ci_pass }}"
         sshkeys: "{{ ssh_pub_key }}"
         timeout: 60
         state: present
-        agent: 1
-        
-    - name: Wait for VM to report IP via guest agent
+
+    - name: Wait for VM to get an IP from Guest Agent
       shell: |
         for i in {1..20}; do
-          ip=$(qm guest cmd {{ vm_id }} network-get-interfaces | jq -r '.[].ip-addresses[]?."ip-address"' | grep -v '127.0.0.1' | head -n 1)
-          if [[ -n "$ip" ]]; then echo $ip && break; fi
+          ip=$(qm guest cmd {{ vm_id }} network-get-interfaces | \
+               jq -r '.[]."ip-addresses"[]?.["ip-address"]' | \
+               grep -v '^127\.' | grep -E '^192\.168|^10\.|^172\.' | head -n1)
+          if [ -n "$ip" ]; then echo $ip && break; fi
           sleep 10
         done
-      register: vm_ip
-      delegate_to: localhost
+      register: vm_ip_result
       changed_when: false
+      delegate_to: localhost
 
-    - name: Set dynamic host for Ansible
+    - name: Set dynamic host for configuration
       add_host:
         name: debian-vm
-        ansible_host: "{{ vm_ip.stdout }}"
+        ansible_host: "{{ vm_ip_result.stdout }}"
         ansible_user: "{{ ci_user }}"
-        ansible_ssh_private_key_file: "{{ ssh_pub_key }}"
-        
-    - name: Configure Debian locale to French
-      hosts: debian-vm
-      become: true
-      vars:
-        locale_lang: fr_FR.UTF-8
-        timezone_name: Europe/Paris
-    
-      tasks:
-        - name: Ensure required packages are installed
-          apt:
-            name: [locales, keyboard-configuration]
-            state: present
-            update_cache: yes
-    
-        - name: Generate French locale
-          command: locale-gen "{{ locale_lang }}"
-    
-        - name: Set system default locale
-          lineinfile:
-            path: /etc/default/locale
-            regexp: '^LANG='
-            line: "LANG={{ locale_lang }}"
-            create: yes
-    
-        - name: Set timezone
-          timezone:
-            name: "{{ timezone_name }}"
-    
-        - name: Set keyboard layout to French (console)
-          copy:
-            dest: /etc/default/keyboard
-            content: |
-              XKBMODEL="pc105"
-              XKBLAYOUT="fr"
-              XKBVARIANT=""
-              XKBOPTIONS=""
-    
-        - name: Reconfigure keyboard non-interactively
-          command: dpkg-reconfigure -f noninteractive keyboard-configuration
-    
-        - name: Apply keyboard settings
-          command: setupcon
-    
-        - name: Reboot to apply all changes
-          reboot:
-            msg: "Rebooting to apply locale and keyboard"
+        ansible_ssh_private_key_file: "~/.ssh/YOUR_PRIVATE_KEY"
+
+- name: Configure Debian locale to French
+  hosts: debian-vm
+  become: true
+  vars:
+    locale_lang: fr_FR.UTF-8
+    timezone_name: Europe/Paris
+
+  tasks:
+    - name: Ensure required packages are installed
+      apt:
+        name: [locales, keyboard-configuration]
+        state: present
+        update_cache: yes
+
+    - name: Generate French locale
+      command: locale-gen "{{ locale_lang }}"
+
+    - name: Set system default locale
+      lineinfile:
+        path: /etc/default/locale
+        regexp: '^LANG='
+        line: "LANG={{ locale_lang }}"
+        create: yes
+
+    - name: Set timezone
+      timezone:
+        name: "{{ timezone_name }}"
+
+    - name: Set keyboard layout to French (console)
+      copy:
+        dest: /etc/default/keyboard
+        content: |
+          XKBMODEL="pc105"
+          XKBLAYOUT="fr"
+          XKBVARIANT=""
+          XKBOPTIONS=""
+
+    - name: Reconfigure keyboard non-interactively
+      command: dpkg-reconfigure -f noninteractive keyboard-configuration
+
+    - name: Apply keyboard settings
+      command: setupcon
+
+    - name: Reboot to apply all changes
+      reboot:
+        msg: "Rebooting to apply locale and keyboard"
