@@ -42,4 +42,4 @@
         ciuser: "{{ ci_user }}"
         cipassword: "{{ ci_pass }}"
         sshkeys: "{{ ssh_pub_key }}"
-        state: present
+        state: started
