@@ -22,6 +22,7 @@
       community.general.proxmox_kvm:
         api_host: "{{ proxmox_host }}"
         api_user: "{{ api_user }}"
+        api_token_id: "{{ api_token_id }}"
         token: "{{ api_token }}"
         node: "{{ proxmox_node }}"
         vmid: "{{ vm_id }}"
