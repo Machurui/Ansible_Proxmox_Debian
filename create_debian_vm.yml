@@ -1,61 +1,59 @@
 ---
-- name: Prepare Debian template with QEMU Guest Agent
+- name: Provision Debian VM and configure French locale
   hosts: localhost
-  gather_facts: no
+  gather_facts: false
   vars:
-    template_vm_id: 9000
-    proxmox_host: "{{ lookup('env', 'PROXMOX_IP') }}"
+    vm_id: 120
+    vm_name: "debian-vm-auto"
+    template_vm_id: "debian-template"
+    storage: "HDD-TAFF1"
+    target_disk_size: 10G
     proxmox_node: "{{ lookup('env', 'PROXMOX_NODE') }}"
-    ssh_user: "{{ lookup('env', 'CI_USER') }}"
-    ssh_priv_key: "~/.ssh/id_rsa"
+    proxmox_host: "{{ lookup('env', 'PROXMOX_IP') }}"
+    api_user: "{{ lookup('env', 'PROXMOX_API_USER') }}"
+    api_password: "{{ lookup('env', 'PROXMOX_API_PASSWORD') }}"
+    ci_user: "{{ lookup('env', 'CI_USER') }}"
+    ci_pass: "{{ lookup('env', 'CI_PASS') }}"
+    ssh_pub_key: "{{ lookup('env', 'SSH_PUB_KEY') }}"
 
   tasks:
-    - name: Start the template VM
-      shell: qm start {{ template_vm_id }}
-      delegate_to: localhost
-
-    - name: Wait for SSH to become available
-      wait_for:
-        host: "{{ template_ip }}"
-        port: 22
-        timeout: 120
-        state: started
-
-    - name: Add temporary host for SSH access
-      add_host:
-        name: debian-template
-        ansible_host: "{{ template_ip }}"
-        ansible_user: "{{ ssh_user }}"
-        ansible_ssh_private_key_file: "{{ ssh_priv_key }}"
-
-- name: Install QEMU Guest Agent inside template
-  hosts: debian-template
-  become: true
-  tasks:
-    - name: Install qemu-guest-agent
-      apt:
-        name: qemu-guest-agent
+    - name: Clone Debian VM from template
+      community.general.proxmox_kvm:
+        api_host: "{{ proxmox_host }}"
+        api_user: "{{ api_user }}"
+        api_password: "{{ api_password }}"
+        node: "{{ proxmox_node }}"
+        clone: "{{ template_vm_id }}"
+        name: "{{ vm_name }}"
+        memory: 1024
+        cores: 1
+        scsihw: virtio-scsi-single
+        ide:
+          ide0: 'local:cloudinit,format=qcow2'
+        net:
+          net0: 'virtio,bridge=vmbr0'
+        scsi:
+          scsi0: "{{ storage }}:{{ target_disk_size }},format=qcow2"
+        agent: 1
+        ciuser: "{{ ci_user }}"
+        cipassword: "{{ ci_pass }}"
+        sshkeys: "{{ ssh_pub_key }}"
+        timeout: 60
         state: present
-        update_cache: yes
 
-    - name: Enable and start qemu-guest-agent
-      systemd:
-        name: qemu-guest-agent
-        enabled: true
-        state: started
-
-- name: Finalize template and convert back
-  hosts: localhost
-  gather_facts: no
-  tasks:
-    - name: Shutdown the template VM
-      shell: qm shutdown {{ template_vm_id }} --timeout 60
+    - name: Wait for VM to get an IP from Guest Agent
+      shell: |
+        for i in {1..20}; do
+          ip=$(qm guest cmd {{ vm_id }} network-get-interfaces | \
+               jq -r '.[]."ip-addresses"[]?.["ip-address"]' | \
+               grep -v '^127\.' | grep -E '^192\.168|^10\.|^172\.' | head -n1)
+          if [ -n "$ip" ]; then echo $ip && break; fi
+          sleep 10
+        done
+      register: vm_ip_result
+      changed_when: false
       delegate_to: localhost
-
-    - name: Enable QEMU Guest Agent in Proxmox hardware config
-      shell: qm set {{ template_vm_id }} --agent enabled=1
-      delegate_to: localhost
-
-    - name: Convert back to template
-      shell: qm template {{ template_vm_id }}
-      delegate_to: localhost
+      
+    - name: Debug detected VM IP
+      debug:
+        msg: "Detected IP: {{ vm_ip_result.stdout }}"
