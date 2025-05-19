@@ -16,7 +16,6 @@
     ci_user: "{{ lookup('env', 'CI_USER') }}"
     ci_pass: "{{ lookup('env', 'CI_PASS') }}"
 
-  tasks:
     - name: Clone from Debian cloud-init template
       community.general.proxmox_kvm:
         api_host: "{{ proxmox_host }}"
@@ -31,7 +30,8 @@
         cores: 1
         net0: virtio,bridge=vmbr0
         ide2: "{{ storage }}:cloudinit"
-        serial: socket
+        serial:
+          serial0: socket
         sata0: "{{ storage }}:{{ target_disk_size }}"
         ciuser: "{{ ci_user }}"
         cipassword: "{{ ci_pass }}"
