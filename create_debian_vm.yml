@@ -21,27 +21,20 @@
     - name: Clone from Debian cloud-init template
       community.general.proxmox_kvm:
         api_host: "{{ proxmox_host }}"
-        api_user: "{{ api_user }}"
         api_token_id: "{{ api_token_id }}"
         api_token_secret: "{{ api_token_secret }}"
-        node: "{{ proxmox_node }}"
-        vmid: "{{ vm_id | int }}"
-        clone: "{{ template_vm_id | int }}"
-        name: "{{ vm_name }}"
-        storage: "{{ storage }}"
-        memory: 1024
+        api_user: "{{ api_user }}"
+        clone: "{{ template_vm_id }}"
         cores: 1
-        net:
-        net0: virtio,bridge=vmbr0
-        ide:
-          ide2: "{{ storage }}:cloudinit,media=cdrom"
-        sata:
-          sata0: "{{ storage }}:{{ target_disk_size }}"
-        serial:
-          serial0: socket
-        ciuser: "{{ ci_user }}"
-        cipassword: "{{ ci_pass }}"
-        sshkeys: "{{ ssh_pub_key }}"
+        disk_volume:
+          storage: "{{ storage }}"
+          size: 20
+        force: true
+        memory: 1024
+        node: "{{ proxmox_node }}"
         state: started
         timeout: 60
-        force: true
+        vmid: "{{ vm_id | int }}"
+    - name: fail script if VM already exists
+        fail: msg="The VM with id {{ vm.id }} already exists"
+        when: result.rc == 0
