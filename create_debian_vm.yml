@@ -1,0 +1,39 @@
+---
+- name: Create Debian VM on Proxmox with API token
+  hosts: localhost
+  gather_facts: no
+  vars:
+    proxmox_node: "pve"
+    vm_id: 120
+    vm_name: "debian-vm-auto"
+    template_vm_id: 9000
+    storage: "local-lvm"
+    target_disk_size: 10G
+    proxmox_host:  "{{ lookup('env', 'PROXMOX_IP') }}"
+    api_user: "{{ lookup('env', 'PROXMOX_API_USER') }}"
+    api_token: "{{ lookup('env', 'PROXMOX_API_TOKEN') }}"
+    ssh_pub_key: "{{ lookup('file', '/root/.ssh/id_rsa.pub') }}"
+    ci_user: "{{ lookup('env', 'CI_USER') }}"
+    ci_pass: "{{ lookup('env', 'CI_PASS') }}"
+
+  tasks:
+    - name: Clone from Debian cloud-init template
+      community.general.proxmox_kvm:
+        api_host: "{{ proxmox_host }}"
+        api_user: "{{ api_user }}"
+        token: "{{ api_token }}"
+        node: "{{ proxmox_node }}"
+        vmid: "{{ vm_id }}"
+        clone: "{{ template_vm_id }}"
+        name: "{{ vm_name }}"
+        storage: "{{ storage }}"
+        memory: 1024
+        cores: 1
+        net0: virtio,bridge=vmbr0
+        ide2: "{{ storage }}:cloudinit"
+        serial: socket
+        sata0: "{{ storage }}:{{ target_disk_size }}"
+        ciuser: "{{ ci_user }}"
+        cipassword: "{{ ci_pass }}"
+        sshkeys: "{{ ssh_pub_key }}"
+        state: present
