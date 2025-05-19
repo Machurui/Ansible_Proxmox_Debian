@@ -1,114 +1,61 @@
 ---
-- name: Provision Debian VM and configure French locale
+- name: Prepare Debian template with QEMU Guest Agent
   hosts: localhost
-  gather_facts: false
+  gather_facts: no
   vars:
-    vm_id: 120
-    vm_name: "debian-vm-auto"
-    template_vm_id: "debian-template"
-    storage: "HDD-TAFF1"
-    target_disk_size: 10G
-    proxmox_node: "{{ lookup('env', 'PROXMOX_NODE') }}"
+    template_vm_id: 9000
     proxmox_host: "{{ lookup('env', 'PROXMOX_IP') }}"
-    api_user: "{{ lookup('env', 'PROXMOX_API_USER') }}"
-    api_password: "{{ lookup('env', 'PROXMOX_API_PASSWORD') }}"
-    ci_user: "{{ lookup('env', 'CI_USER') }}"
-    ci_pass: "{{ lookup('env', 'CI_PASS') }}"
-    ssh_pub_key: "{{ lookup('env', 'SSH_PUB_KEY') }}"
+    proxmox_node: "{{ lookup('env', 'PROXMOX_NODE') }}"
+    ssh_user: "{{ lookup('env', 'CI_USER') }}"
+    ssh_priv_key: "~/.ssh/id_rsa"
 
   tasks:
-    - name: Clone Debian VM from template
-      community.general.proxmox_kvm:
-        api_host: "{{ proxmox_host }}"
-        api_user: "{{ api_user }}"
-        api_password: "{{ api_password }}"
-        node: "{{ proxmox_node }}"
-        clone: "{{ template_vm_id }}"
-        name: "{{ vm_name }}"
-        memory: 1024
-        cores: 1
-        scsihw: virtio-scsi-single
-        ide:
-          ide0: 'local:cloudinit,format=qcow2'
-        net:
-          net0: 'virtio,bridge=vmbr0'
-        scsi:
-          scsi0: "{{ storage }}:{{ target_disk_size }},format=qcow2"
-        agent: 1
-        ciuser: "{{ ci_user }}"
-        cipassword: "{{ ci_pass }}"
-        sshkeys: "{{ ssh_pub_key }}"
-        timeout: 60
-        state: present
-
-    - name: Wait for VM to get an IP from Guest Agent
-      shell: |
-        for i in {1..20}; do
-          ip=$(qm guest cmd {{ vm_id }} network-get-interfaces | \
-               jq -r '.[]."ip-addresses"[]?.["ip-address"]' | \
-               grep -v '^127\.' | grep -E '^192\.168|^10\.|^172\.' | head -n1)
-          if [ -n "$ip" ]; then echo $ip && break; fi
-          sleep 10
-        done
-      register: vm_ip_result
-      changed_when: false
+    - name: Start the template VM
+      shell: qm start {{ template_vm_id }}
       delegate_to: localhost
-      
-    - name: Debug detected VM IP
-      debug:
-        msg: "Detected IP: {{ vm_ip_result.stdout }}"
 
+    - name: Wait for SSH to become available
+      wait_for:
+        host: "{{ template_ip }}"
+        port: 22
+        timeout: 120
+        state: started
 
-    - name: Set dynamic host for configuration
+    - name: Add temporary host for SSH access
       add_host:
-        name: debian-vm
-        ansible_host: "{{ vm_ip_result.stdout }}"
-        ansible_user: "{{ ci_user }}"
-        ansible_ssh_private_key_file: "{{ ssh_pub_key }}"
+        name: debian-template
+        ansible_host: "{{ template_ip }}"
+        ansible_user: "{{ ssh_user }}"
+        ansible_ssh_private_key_file: "{{ ssh_priv_key }}"
 
-- name: Configure Debian locale to French
-  hosts: debian-vm
+- name: Install QEMU Guest Agent inside template
+  hosts: debian-template
   become: true
-  vars:
-    locale_lang: fr_FR.UTF-8
-    timezone_name: Europe/Paris
-
   tasks:
-    - name: Ensure required packages are installed
+    - name: Install qemu-guest-agent
       apt:
-        name: [locales, keyboard-configuration]
+        name: qemu-guest-agent
         state: present
         update_cache: yes
 
-    - name: Generate French locale
-      command: locale-gen "{{ locale_lang }}"
+    - name: Enable and start qemu-guest-agent
+      systemd:
+        name: qemu-guest-agent
+        enabled: true
+        state: started
 
-    - name: Set system default locale
-      lineinfile:
-        path: /etc/default/locale
-        regexp: '^LANG='
-        line: "LANG={{ locale_lang }}"
-        create: yes
+- name: Finalize template and convert back
+  hosts: localhost
+  gather_facts: no
+  tasks:
+    - name: Shutdown the template VM
+      shell: qm shutdown {{ template_vm_id }} --timeout 60
+      delegate_to: localhost
 
-    - name: Set timezone
-      timezone:
-        name: "{{ timezone_name }}"
+    - name: Enable QEMU Guest Agent in Proxmox hardware config
+      shell: qm set {{ template_vm_id }} --agent enabled=1
+      delegate_to: localhost
 
-    - name: Set keyboard layout to French (console)
-      copy:
-        dest: /etc/default/keyboard
-        content: |
-          XKBMODEL="pc105"
-          XKBLAYOUT="fr"
-          XKBVARIANT=""
-          XKBOPTIONS=""
-
-    - name: Reconfigure keyboard non-interactively
-      command: dpkg-reconfigure -f noninteractive keyboard-configuration
-
-    - name: Apply keyboard settings
-      command: setupcon
-
-    - name: Reboot to apply all changes
-      reboot:
-        msg: "Rebooting to apply locale and keyboard"
+    - name: Convert back to template
+      shell: qm template {{ template_vm_id }}
+      delegate_to: localhost
