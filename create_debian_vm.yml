@@ -32,6 +32,7 @@
         name: "{{ vm_name }}"
         memory: 1024
         cores: 1
+        bios: ovmf
         ide:
           ide0: 'local:cloudinit,format=qcow2'
         net:
@@ -42,7 +43,7 @@
           storage: HDD-TAFF1
           format: raw
           efitype: 4m
-          pre_enrolled_keys: 1
+          pre_enrolled_keys: false
         ciuser: "{{ ci_user }}"
         cipassword: "{{ ci_pass }}"
         sshkeys: "{{ ssh_pub_key }}"
