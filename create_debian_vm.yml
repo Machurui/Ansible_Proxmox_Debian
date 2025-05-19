@@ -12,7 +12,7 @@
     proxmox_host:  "{{ lookup('env', 'PROXMOX_IP') }}"
     api_user: "{{ lookup('env', 'PROXMOX_API_USER') }}"
     api_token: "{{ lookup('env', 'PROXMOX_API_TOKEN') }}"
-    ssh_pub_key: "{{ lookup('file', '/root/.ssh/id_rsa.pub') }}"
+    ssh_pub_key: "{{ lookup('env', 'SSH_PUB_KEY') }}"
     ci_user: "{{ lookup('env', 'CI_USER') }}"
     ci_pass: "{{ lookup('env', 'CI_PASS') }}"
 
