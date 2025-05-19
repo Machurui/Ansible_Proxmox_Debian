@@ -11,6 +11,7 @@
     target_disk_size: 10G
     proxmox_host: "{{ lookup('env', 'PROXMOX_IP') }}"
     api_user: "{{ lookup('env', 'PROXMOX_API_USER') }}"
+    api_token_id: "{{ lookup('env', 'PROXMOX_API_TOKEN_ID') }}"
     api_token: "{{ lookup('env', 'PROXMOX_API_TOKEN') }}"
     ssh_pub_key: "{{ lookup('env', 'SSH_PUB_KEY') }}"
     ci_user: "{{ lookup('env', 'CI_USER') }}"
