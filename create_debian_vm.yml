@@ -53,13 +53,18 @@
       register: vm_ip_result
       changed_when: false
       delegate_to: localhost
+      
+    - name: Debug detected VM IP
+      debug:
+        msg: "Detected IP: {{ vm_ip_result.stdout }}"
+
 
     - name: Set dynamic host for configuration
       add_host:
         name: debian-vm
         ansible_host: "{{ vm_ip_result.stdout }}"
         ansible_user: "{{ ci_user }}"
-        ansible_ssh_private_key_file: "~/.ssh/YOUR_PRIVATE_KEY"
+        ansible_ssh_private_key_file: "{{ ssh_pub_key }}"
 
 - name: Configure Debian locale to French
   hosts: debian-vm
