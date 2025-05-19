@@ -3,7 +3,7 @@
   hosts: localhost
   gather_facts: no
   vars:
-    proxmox_node: "pve"
+    proxmox_node: "proxmox"
     vm_id: 120
     vm_name: "debian-vm-auto"
     template_vm_id: 9000
