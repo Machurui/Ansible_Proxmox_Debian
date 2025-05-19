@@ -3,7 +3,7 @@
   hosts: localhost
   gather_facts: no
   vars:
-    proxmox_node: "proxmox"
+    proxmox_node: "{{ lookup('env', 'PROXMOX_NODE') }}"
     vm_id: 120
     vm_name: "debian-vm-auto"
     template_vm_id: "debian-template"
