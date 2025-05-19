@@ -35,6 +35,8 @@
         state: started
         timeout: 60
         vmid: "{{ vm_id | int }}"
-    - name: fail script if VM already exists
-        fail: msg="The VM with id {{ vm.id }} already exists"
-        when: result.rc == 0
+
+    - name: Fail script if VM already exists
+      fail:
+        msg: "The VM with id {{ vm.id }} already exists"
+      when: result.rc == 0
