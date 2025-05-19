@@ -6,7 +6,7 @@
     proxmox_node: "proxmox"
     vm_id: 120
     vm_name: "debian-vm-auto"
-    template_vm_id: 9000
+    template_vm_id: "debian-template"
     storage: "HDD-TAFF1"
     target_disk_size: 10G
     proxmox_host: "{{ lookup('env', 'PROXMOX_IP') }}"
