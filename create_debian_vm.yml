@@ -9,13 +9,14 @@
     template_vm_id: 9000
     storage: "local-lvm"
     target_disk_size: 10G
-    proxmox_host:  "{{ lookup('env', 'PROXMOX_IP') }}"
+    proxmox_host: "{{ lookup('env', 'PROXMOX_IP') }}"
     api_user: "{{ lookup('env', 'PROXMOX_API_USER') }}"
     api_token: "{{ lookup('env', 'PROXMOX_API_TOKEN') }}"
     ssh_pub_key: "{{ lookup('env', 'SSH_PUB_KEY') }}"
     ci_user: "{{ lookup('env', 'CI_USER') }}"
     ci_pass: "{{ lookup('env', 'CI_PASS') }}"
 
+  tasks:
     - name: Clone from Debian cloud-init template
       community.general.proxmox_kvm:
         api_host: "{{ proxmox_host }}"
