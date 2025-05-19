@@ -32,21 +32,14 @@
         memory: 1024
         cores: 1
         net:
-          - model: virtio
-            bridge: vmbr0
+          net0: virtio,bridge=vmbr0
         ide:
-          - index: 2
-            media: cdrom
-            storage: "{{ storage }}"
-            file: cloudinit
+          ide2: "{{ storage }}:cloudinit,media=cdrom"
         serial:
           serial0: socket
         sata:
-          - index: 0
-            storage: "{{ storage }}"
-            size: "{{ target_disk_size }}"
+          sata0: "{{ storage }}:{{ target_disk_size }}"
         ciuser: "{{ ci_user }}"
         cipassword: "{{ ci_pass }}"
         sshkeys: "{{ ssh_pub_key }}"
         state: present
-
