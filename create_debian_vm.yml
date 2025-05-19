@@ -30,7 +30,6 @@
         node: "{{ proxmox_node }}"
         clone: "{{ template_vm_id }}"
         name: "{{ vm_name }}"
-        vmid: "{{ vm_id }}"
         memory: 1024
         cores: 1
         ide:
