@@ -63,3 +63,50 @@
         ansible_host: "{{ vm_ip.stdout }}"
         ansible_user: "{{ ci_user }}"
         ansible_ssh_private_key_file: "{{ ssh_pub_key }}"
+        
+    - name: Configure Debian locale to French
+      hosts: debian-vm
+      become: true
+      vars:
+        locale_lang: fr_FR.UTF-8
+        timezone_name: Europe/Paris
+    
+      tasks:
+        - name: Ensure required packages are installed
+          apt:
+            name: [locales, keyboard-configuration]
+            state: present
+            update_cache: yes
+    
+        - name: Generate French locale
+          command: locale-gen "{{ locale_lang }}"
+    
+        - name: Set system default locale
+          lineinfile:
+            path: /etc/default/locale
+            regexp: '^LANG='
+            line: "LANG={{ locale_lang }}"
+            create: yes
+    
+        - name: Set timezone
+          timezone:
+            name: "{{ timezone_name }}"
+    
+        - name: Set keyboard layout to French (console)
+          copy:
+            dest: /etc/default/keyboard
+            content: |
+              XKBMODEL="pc105"
+              XKBLAYOUT="fr"
+              XKBVARIANT=""
+              XKBOPTIONS=""
+    
+        - name: Reconfigure keyboard non-interactively
+          command: dpkg-reconfigure -f noninteractive keyboard-configuration
+    
+        - name: Apply keyboard settings
+          command: setupcon
+    
+        - name: Reboot to apply all changes
+          reboot:
+            msg: "Rebooting to apply locale and keyboard"
