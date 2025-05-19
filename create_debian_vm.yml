@@ -31,14 +31,10 @@
         storage: "{{ storage }}"
         memory: 1024
         cores: 1
-        net:
-          net0: virtio,bridge=vmbr0
-        ide:
-          ide2: "{{ storage }}:cloudinit,media=cdrom"
-        serial:
-          serial0: socket
-        sata:
-          sata0: "{{ storage }}:{{ target_disk_size }}"
+        net0: virtio,bridge=vmbr0
+        ide2: "{{ storage }}:cloudinit,media=cdrom"
+        serial0: socket
+        sata0: "{{ storage }}:{{ target_disk_size }}"
         ciuser: "{{ ci_user }}"
         cipassword: "{{ ci_pass }}"
         sshkeys: "{{ ssh_pub_key }}"
