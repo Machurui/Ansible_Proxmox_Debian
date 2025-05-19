@@ -25,7 +25,7 @@
         api_token_id: "{{ api_token_id }}"
         api_token_secret: "{{ api_token_secret }}"
         node: "{{ proxmox_node }}"
-        vmid: "{{ vm_id }}"
+        vmid: "{{ vm_id | int }}"
         clone: "{{ template_vm_id | int }}"
         name: "{{ vm_name }}"
         storage: "{{ storage }}"
@@ -43,3 +43,5 @@
         cipassword: "{{ ci_pass }}"
         sshkeys: "{{ ssh_pub_key }}"
         state: started
+        force: true
+        timeout: 60
