@@ -3,15 +3,14 @@
   hosts: localhost
   gather_facts: false
   vars:
-    vm_id: 120
-    vm_name: "debian-vm-auto"
-    template_vm_id: "debian-template"
-    storage: "HDD-TAFF1"
-    target_disk_size: 10G
-    proxmox_node: "{{ lookup('env', 'PROXMOX_NODE') }}"
+    vm_name: "{{ lookup('env', 'NAME') }}"
+    storage: "{{ lookup('env', 'STORAGE') }}"
+    target_disk_size: "{{ lookup('env', 'SIZE') }}"
     proxmox_host: "{{ lookup('env', 'PROXMOX_IP') }}"
     api_user: "{{ lookup('env', 'PROXMOX_API_USER') }}"
     api_password: "{{ lookup('env', 'PROXMOX_API_PASSWORD') }}"
+    proxmox_node: "{{ lookup('env', 'PROXMOX_NODE') }}"
+    template_vm_id: "debian-template"
     ci_user: "{{ lookup('env', 'CI_USER') }}"
     ci_pass: "{{ lookup('env', 'CI_PASS') }}"
     ssh_pub_key: "{{ lookup('env', 'SSH_PUB_KEY') }}"
